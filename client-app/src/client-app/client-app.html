@@ -1,0 +1,185 @@
+<link rel="import" href="../../bower_components/polymer/polymer-element.html">
+<link rel="import" href="../../bower_components/paper-input/paper-input.html">
+<link rel="import" href="../../bower_components/paper-button/paper-button.html">
+<link rel="import" href="../../bower_components/polymer/lib/elements/dom-repeat.html">
+
+<dom-module id="client-app">
+  <template>
+    <style>
+      :host {
+        display: block;
+        background-color: #fafafa;
+      }
+      #chat-window {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        margin-left: auto;
+        margin-right: auto;
+        width: 600px;
+        height: 700px;
+        background-color: #ffffff;
+        border: 1px solid #c1c1c1;
+        border-radius: 4px;
+      }
+      #user-panel {
+        background-color: #f4f4f4;
+        border-bottom: 1px solid #e5e5e5;
+        width: 200px;
+      }
+      #messages {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 90%;
+      }
+      #message-container {
+        width: 100%;
+        margin-top: 5px;
+        /*padding-left: 5px;*/
+        /*padding-right: 5px;*/
+        /*background-color: #0b8043;*/
+      }
+      #message {
+        width: 200px;
+        background-color: #8dc2da;
+        border: 1px solid #c1c1c1;
+        border-radius: 4px;
+        margin-left: 10px;
+        margin-right: 10px;
+        padding: 10px;
+      }
+      .to-left-side {
+        float: left;
+      }
+      .to-right-side {
+        float: right;
+      }
+      #text-input-area {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 10%;
+        background-color: #f4f4f4;
+        border-top: 1px solid #e5e5e5;
+      }
+      paper-input {
+        width: 80%;
+        padding: 10px;
+      }
+      paper-button {
+        height: 65%;
+        background-color: #ffffff;
+        margin-top: 17px;
+      }
+    </style>
+
+    <button on-click="connect">connect</button>
+
+    <div id="user-panel">
+      <paper-input label="Username" value="{{username}}"></paper-input>
+    </div>
+
+    <div id="chat-window">
+
+      <div id="messages">
+        <template id="messageRepeat" is="dom-repeat" items="{{messageList}}">
+          <div id="message-container">
+            <template is="dom-if" if="{{item.msgIsInComing}}" restamp>
+              <div id="message" class="to-left-side"><span>{{item.content}}</span></div>
+            </template>
+            <template is="dom-if" if="{{!item.msgIsInComing}}" restamp>
+              <div id="message" class="to-right-side"><span>{{item.content}}</span></div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+      <div id="text-input-area">
+        <paper-input label="Enter message" value="{{msg}}"></paper-input>
+        <paper-button on-tap="send" raised>Send</paper-button>
+      </div>
+
+    </div>
+
+  </template>
+
+  <script>
+    /**
+     * @customElement
+     * @polymer
+     */
+    class ClientApp extends Polymer.Element {
+      static get is() {
+        return 'client-app';
+      }
+
+      static get ws() {
+        return null;
+      }
+
+      static get properties() {
+        return {
+          msg: {
+            type: String
+          },
+          username: {
+            type: String
+          },
+          messageList: {
+            type: Array,
+            value() {
+              return []
+            }
+          },
+          ws: {
+            type: Object
+          },
+          url: {
+            type: String,
+            computed: 'computeUrl(username)'
+          },
+          connectionId: {
+            type: String
+          }
+        };
+      }
+
+      computeUrl(username) {
+        return "ws://localhost:8080/chat/" + this.username;
+      }
+
+      connect() {
+        this.ws = new WebSocket(this.url);
+        this.ws.onmessage = (event) => {
+          let data = JSON.parse(event.data);
+
+          console.log(data);
+
+          if (typeof this.connectionId == 'undefined') {
+            this.connectionId = data.connectionId;
+            console.log(this.connectionId);
+          }
+
+          if (data.connectionId == this.connectionId) {
+            data.msgIsInComing = false;
+          } else {
+            data.msgIsInComing = true;
+          }
+
+          console.log(data);
+
+          this.push('messageList', data);
+          this.notifyPath('employees');
+        };
+      }
+
+      send() {
+        this.ws.send(JSON.stringify({content: this.msg}));
+        this.msg = "";
+      }
+    }
+
+    window.customElements.define(ClientApp.is, ClientApp);
+  </script>
+</dom-module>
